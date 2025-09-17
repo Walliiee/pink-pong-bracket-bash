@@ -47,6 +47,13 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        pink: {
+          primary: "hsl(var(--pink-primary))",
+          secondary: "hsl(var(--pink-secondary))",
+          accent: "hsl(var(--pink-accent))",
+          hot: "hsl(var(--pink-hot))",
+          soft: "hsl(var(--pink-soft))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
