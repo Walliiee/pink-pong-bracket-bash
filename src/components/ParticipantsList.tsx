@@ -60,6 +60,9 @@ export const ParticipantsList = () => {
 
       if (error) throw error;
 
+      // Refresh the participants list
+      fetchParticipants();
+      
       toast({
         title: "Participant removed",
         description: `${name} has been removed from the tournament.`,

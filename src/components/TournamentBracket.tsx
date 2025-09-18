@@ -27,10 +27,16 @@ export const TournamentBracket = () => {
   useEffect(() => {
     fetchMatches();
     
-    // Subscribe to real-time updates
+    // Subscribe to real-time updates for matches, teams, and participants
     const channel = supabase
-      .channel('matches-changes')
+      .channel('tournament-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, () => {
+        fetchMatches();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, () => {
+        fetchMatches();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, () => {
         fetchMatches();
       })
       .subscribe();
@@ -110,6 +116,18 @@ export const TournamentBracket = () => {
     );
   }
 
+  // Create a traditional bracket layout
+  const createBracketLayout = () => {
+    const rounds = Object.keys(groupedMatches).map(Number).sort((a, b) => a - b);
+    const leftSideRounds = rounds.slice(0, Math.ceil(rounds.length / 2));
+    const rightSideRounds = rounds.slice(Math.ceil(rounds.length / 2)).reverse();
+    
+    return { leftSideRounds, rightSideRounds, finalRound: rounds[rounds.length - 1] };
+  };
+
+  const { leftSideRounds, rightSideRounds, finalRound } = createBracketLayout();
+  const finalMatch = groupedMatches[finalRound]?.[0];
+
   return (
     <div className="space-y-8">
       <div className="text-center">
@@ -119,84 +137,201 @@ export const TournamentBracket = () => {
         <p className="text-muted-foreground">Single elimination • Winner takes all!</p>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-        {Object.entries(groupedMatches)
-          .sort(([a], [b]) => Number(a) - Number(b))
-          .map(([round, roundMatches]) => (
-            <div key={round} className="space-y-4">
-              <h3 className="text-xl font-semibold text-center text-primary">
-                {getRoundName(Number(round), totalRounds)}
-              </h3>
-              
-              <div className="space-y-3">
-                {roundMatches.map((match) => (
-                  <Card 
-                    key={match.id} 
-                    className="p-4 bg-card/50 backdrop-blur-sm border-pink-secondary/20 hover:border-primary/30 transition-all duration-300"
-                  >
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Badge 
-                          variant={match.status === 'completed' ? 'default' : 'secondary'}
-                          className="text-xs"
-                        >
-                          Match {match.match_number}
-                        </Badge>
-                        {match.status === 'completed' && match.winner && (
-                          <Trophy className="w-4 h-4 text-yellow-500" />
-                        )}
-                      </div>
-
+      <div className="relative overflow-x-auto">
+        <div className="flex justify-center items-center min-w-[1200px] p-8">
+          {/* Left Side */}
+          <div className="flex-1 space-y-8">
+            {leftSideRounds.map((round) => (
+              <div key={round} className="space-y-4">
+                <h3 className="text-lg font-semibold text-center text-primary">
+                  {getRoundName(round, totalRounds)}
+                </h3>
+                <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.max(1, groupedMatches[round]?.length || 0)}, 1fr)` }}>
+                  {groupedMatches[round]?.map((match) => (
+                    <Card 
+                      key={match.id} 
+                      className="p-3 bg-card/50 backdrop-blur-sm border-pink-secondary/20 hover:border-primary/30 transition-all duration-300"
+                    >
                       <div className="space-y-2">
-                        {/* Team 1 */}
-                        <div className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
-                          match.winner?.id === match.team1?.id 
-                            ? 'bg-gradient-to-r from-primary/20 to-pink-hot/10 border border-primary/30' 
-                            : 'bg-muted/30'
-                        }`}>
-                          <Users className="w-4 h-4 text-primary" />
-                          <span className="text-sm font-medium">
-                            {match.team1 
-                              ? `${match.team1.player1.name} & ${match.team1.player2.name}`
-                              : 'TBD'
-                            }
-                          </span>
+                        <div className="flex items-center justify-between">
+                          <Badge 
+                            variant={match.status === 'completed' ? 'default' : 'secondary'}
+                            className="text-xs"
+                          >
+                            M{match.match_number}
+                          </Badge>
+                          {match.status === 'completed' && match.winner && (
+                            <Trophy className="w-3 h-3 text-yellow-500" />
+                          )}
                         </div>
 
-                        <div className="text-center text-xs text-muted-foreground font-medium">VS</div>
+                        <div className="space-y-1">
+                          {/* Team 1 */}
+                          <div className={`flex items-center gap-2 p-2 rounded text-xs transition-colors ${
+                            match.winner?.id === match.team1?.id 
+                              ? 'bg-gradient-to-r from-primary/20 to-pink-hot/10 border border-primary/30' 
+                              : 'bg-muted/30'
+                          }`}>
+                            <Users className="w-3 h-3 text-primary" />
+                            <span className="font-medium truncate">
+                              {match.team1 
+                                ? `${match.team1.player1.name} & ${match.team1.player2.name}`
+                                : 'TBD'
+                              }
+                            </span>
+                          </div>
 
-                        {/* Team 2 */}
-                        <div className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
-                          match.winner?.id === match.team2?.id 
-                            ? 'bg-gradient-to-r from-primary/20 to-pink-hot/10 border border-primary/30' 
-                            : 'bg-muted/30'
-                        }`}>
-                          <Users className="w-4 h-4 text-primary" />
-                          <span className="text-sm font-medium">
-                            {match.team2 
-                              ? `${match.team2.player1.name} & ${match.team2.player2.name}`
-                              : 'TBD'
-                            }
-                          </span>
-                        </div>
-                      </div>
+                          <div className="text-center text-xs text-muted-foreground">vs</div>
 
-                      {match.status === 'completed' && match.winner && (
-                        <div className="pt-2 border-t border-border/50">
-                          <div className="text-center">
-                            <span className="text-xs text-muted-foreground">Winner:</span>
-                            <div className="font-bold text-primary">
-                              {match.winner.player1.name} & {match.winner.player2.name}
-                            </div>
+                          {/* Team 2 */}
+                          <div className={`flex items-center gap-2 p-2 rounded text-xs transition-colors ${
+                            match.winner?.id === match.team2?.id 
+                              ? 'bg-gradient-to-r from-primary/20 to-pink-hot/10 border border-primary/30' 
+                              : 'bg-muted/30'
+                          }`}>
+                            <Users className="w-3 h-3 text-primary" />
+                            <span className="font-medium truncate">
+                              {match.team2 
+                                ? `${match.team2.player1.name} & ${match.team2.player2.name}`
+                                : 'TBD'
+                              }
+                            </span>
                           </div>
                         </div>
-                      )}
-                    </div>
-                  </Card>
-                ))}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
               </div>
+            ))}
+          </div>
+
+          {/* Final Match */}
+          {finalMatch && (
+            <div className="mx-8 flex flex-col items-center">
+              <h3 className="text-xl font-bold text-center text-primary mb-4">Final</h3>
+              <Card className="p-4 bg-gradient-to-r from-primary/10 to-pink-hot/10 border-primary/30 min-w-[200px]">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-center">
+                    <Trophy className="w-6 h-6 text-yellow-500" />
+                  </div>
+
+                  <div className="space-y-2">
+                    {/* Team 1 */}
+                    <div className={`flex items-center gap-2 p-2 rounded text-sm transition-colors ${
+                      finalMatch.winner?.id === finalMatch.team1?.id 
+                        ? 'bg-gradient-to-r from-primary/30 to-pink-hot/20 border border-primary/50' 
+                        : 'bg-muted/30'
+                    }`}>
+                      <Users className="w-4 h-4 text-primary" />
+                      <span className="font-medium">
+                        {finalMatch.team1 
+                          ? `${finalMatch.team1.player1.name} & ${finalMatch.team1.player2.name}`
+                          : 'TBD'
+                        }
+                      </span>
+                    </div>
+
+                    <div className="text-center text-sm text-muted-foreground font-medium">VS</div>
+
+                    {/* Team 2 */}
+                    <div className={`flex items-center gap-2 p-2 rounded text-sm transition-colors ${
+                      finalMatch.winner?.id === finalMatch.team2?.id 
+                        ? 'bg-gradient-to-r from-primary/30 to-pink-hot/20 border border-primary/50' 
+                        : 'bg-muted/30'
+                    }`}>
+                      <Users className="w-4 h-4 text-primary" />
+                      <span className="font-medium">
+                        {finalMatch.team2 
+                          ? `${finalMatch.team2.player1.name} & ${finalMatch.team2.player2.name}`
+                          : 'TBD'
+                        }
+                      </span>
+                    </div>
+                  </div>
+
+                  {finalMatch.status === 'completed' && finalMatch.winner && (
+                    <div className="pt-2 border-t border-border/50">
+                      <div className="text-center">
+                        <span className="text-xs text-muted-foreground">🏆 Champions:</span>
+                        <div className="font-bold text-primary">
+                          {finalMatch.winner.player1.name} & {finalMatch.winner.player2.name}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Card>
             </div>
-          ))}
+          )}
+
+          {/* Right Side */}
+          <div className="flex-1 space-y-8">
+            {rightSideRounds.map((round) => (
+              <div key={round} className="space-y-4">
+                <h3 className="text-lg font-semibold text-center text-primary">
+                  {getRoundName(round, totalRounds)}
+                </h3>
+                <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.max(1, groupedMatches[round]?.length || 0)}, 1fr)` }}>
+                  {groupedMatches[round]?.map((match) => (
+                    <Card 
+                      key={match.id} 
+                      className="p-3 bg-card/50 backdrop-blur-sm border-pink-secondary/20 hover:border-primary/30 transition-all duration-300"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Badge 
+                            variant={match.status === 'completed' ? 'default' : 'secondary'}
+                            className="text-xs"
+                          >
+                            M{match.match_number}
+                          </Badge>
+                          {match.status === 'completed' && match.winner && (
+                            <Trophy className="w-3 h-3 text-yellow-500" />
+                          )}
+                        </div>
+
+                        <div className="space-y-1">
+                          {/* Team 1 */}
+                          <div className={`flex items-center gap-2 p-2 rounded text-xs transition-colors ${
+                            match.winner?.id === match.team1?.id 
+                              ? 'bg-gradient-to-r from-primary/20 to-pink-hot/10 border border-primary/30' 
+                              : 'bg-muted/30'
+                          }`}>
+                            <Users className="w-3 h-3 text-primary" />
+                            <span className="font-medium truncate">
+                              {match.team1 
+                                ? `${match.team1.player1.name} & ${match.team1.player2.name}`
+                                : 'TBD'
+                              }
+                            </span>
+                          </div>
+
+                          <div className="text-center text-xs text-muted-foreground">vs</div>
+
+                          {/* Team 2 */}
+                          <div className={`flex items-center gap-2 p-2 rounded text-xs transition-colors ${
+                            match.winner?.id === match.team2?.id 
+                              ? 'bg-gradient-to-r from-primary/20 to-pink-hot/10 border border-primary/30' 
+                              : 'bg-muted/30'
+                          }`}>
+                            <Users className="w-3 h-3 text-primary" />
+                            <span className="font-medium truncate">
+                              {match.team2 
+                                ? `${match.team2.player1.name} & ${match.team2.player2.name}`
+                                : 'TBD'
+                              }
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
