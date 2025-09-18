@@ -2,17 +2,22 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Trophy } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, Trophy, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface Participant {
   id: string;
   name: string;
+  age: number | null;
+  description: string | null;
   created_at: string;
 }
 
 export const ParticipantsList = () => {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchParticipants();
@@ -43,6 +48,29 @@ export const ParticipantsList = () => {
       console.error('Error fetching participants:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const deleteParticipant = async (id: string, name: string) => {
+    try {
+      const { error } = await supabase
+        .from('participants')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Participant removed",
+        description: `${name} has been removed from the tournament.`,
+      });
+    } catch (error: any) {
+      console.error('Error deleting participant:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove participant. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -82,15 +110,36 @@ export const ParticipantsList = () => {
                 key={participant.id}
                 className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border/30 hover:border-primary/30 transition-colors"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-1">
                   <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-primary to-pink-hot text-white text-sm font-bold">
                     {index + 1}
                   </div>
-                  <span className="font-medium">{participant.name}</span>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{participant.name}</span>
+                      {participant.age && (
+                        <Badge variant="outline" className="text-xs">
+                          {participant.age}
+                        </Badge>
+                      )}
+                    </div>
+                    {participant.description && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {participant.description}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <Badge variant="outline" className="text-xs">
-                  #{index + 1}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => deleteParticipant(participant.id, participant.name)}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
