@@ -74,17 +74,23 @@ export type Database = {
       }
       participants: {
         Row: {
+          age: number | null
           created_at: string
+          description: string | null
           id: string
           name: string
         }
         Insert: {
+          age?: number | null
           created_at?: string
+          description?: string | null
           id?: string
           name: string
         }
         Update: {
+          age?: number | null
           created_at?: string
+          description?: string | null
           id?: string
           name?: string
         }

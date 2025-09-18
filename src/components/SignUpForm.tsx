@@ -13,6 +13,8 @@ interface SignUpFormProps {
 
 export const SignUpForm = ({ onSignUp, disabled = false }: SignUpFormProps) => {
   const [name, setName] = useState("");
+  const [age, setAge] = useState("");
+  const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -28,12 +30,34 @@ export const SignUpForm = ({ onSignUp, disabled = false }: SignUpFormProps) => {
       return;
     }
 
+    if (!age.trim() || isNaN(Number(age)) || Number(age) < 1) {
+      toast({
+        title: "Valid age required",
+        description: "Please enter a valid age!",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!description.trim()) {
+      toast({
+        title: "Description required",
+        description: "Please enter three words that describe you!",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     
     try {
       const { error } = await supabase
         .from('participants')
-        .insert([{ name: name.trim() }]);
+        .insert([{ 
+          name: name.trim(),
+          age: Number(age),
+          description: description.trim()
+        }]);
 
       if (error) throw error;
 
@@ -43,6 +67,8 @@ export const SignUpForm = ({ onSignUp, disabled = false }: SignUpFormProps) => {
       });
 
       setName("");
+      setAge("");
+      setDescription("");
       onSignUp();
     } catch (error: any) {
       console.error('Error signing up:', error);
@@ -79,6 +105,36 @@ export const SignUpForm = ({ onSignUp, disabled = false }: SignUpFormProps) => {
               placeholder="Enter your name..."
               value={name}
               onChange={(e) => setName(e.target.value)}
+              disabled={loading || disabled}
+              className="transition-all duration-300 focus:ring-primary/50 focus:border-primary"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="age" className="text-sm font-medium">
+              Your Age
+            </label>
+            <Input
+              id="age"
+              type="number"
+              placeholder="Enter your age..."
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              disabled={loading || disabled}
+              className="transition-all duration-300 focus:ring-primary/50 focus:border-primary"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="description" className="text-sm font-medium">
+              Three words that describe you
+            </label>
+            <Input
+              id="description"
+              type="text"
+              placeholder="e.g., Fun, Competitive, Energetic"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               disabled={loading || disabled}
               className="transition-all duration-300 focus:ring-primary/50 focus:border-primary"
             />

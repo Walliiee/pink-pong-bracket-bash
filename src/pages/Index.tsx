@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { SignUpForm } from "@/components/SignUpForm";
 import { ParticipantsList } from "@/components/ParticipantsList";
 import { TournamentBracket } from "@/components/TournamentBracket";
-import { AdminControls } from "@/components/AdminControls";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Sparkles } from "lucide-react";
@@ -100,11 +99,6 @@ const Index = () => {
         </div>
 
         <Separator className="my-12" />
-
-        {/* Admin Section */}
-        <div className="max-w-2xl mx-auto">
-          <AdminControls />
-        </div>
       </div>
 
       {/* Footer */}
