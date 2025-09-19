@@ -116,16 +116,27 @@ export const TournamentBracket = () => {
     );
   }
 
-  // Create a traditional bracket layout
+  // Create a traditional bracket layout for 16-team tournament
   const createBracketLayout = () => {
     const rounds = Object.keys(groupedMatches).map(Number).sort((a, b) => a - b);
-    const leftSideRounds = rounds.slice(0, Math.ceil(rounds.length / 2));
-    const rightSideRounds = rounds.slice(Math.ceil(rounds.length / 2)).reverse();
+    const finalRound = rounds[rounds.length - 1];
+    const semifinalRounds = rounds.slice(0, -1); // All rounds except final
     
-    return { leftSideRounds, rightSideRounds, finalRound: rounds[rounds.length - 1] };
+    // Split matches within each round between left and right sides
+    const leftSideMatches: Record<number, Match[]> = {};
+    const rightSideMatches: Record<number, Match[]> = {};
+    
+    semifinalRounds.forEach(round => {
+      const roundMatches = groupedMatches[round] || [];
+      const half = Math.ceil(roundMatches.length / 2);
+      leftSideMatches[round] = roundMatches.slice(0, half);
+      rightSideMatches[round] = roundMatches.slice(half);
+    });
+    
+    return { leftSideMatches, rightSideMatches, finalRound, semifinalRounds };
   };
 
-  const { leftSideRounds, rightSideRounds, finalRound } = createBracketLayout();
+  const { leftSideMatches, rightSideMatches, finalRound, semifinalRounds } = createBracketLayout();
   const finalMatch = groupedMatches[finalRound]?.[0];
 
   return (
@@ -138,16 +149,16 @@ export const TournamentBracket = () => {
       </div>
 
       <div className="relative overflow-x-auto">
-        <div className="flex justify-center items-center min-w-[1200px] p-8">
+        <div className="flex justify-center items-start min-w-[1400px] p-8 gap-8">
           {/* Left Side */}
           <div className="flex-1 space-y-8">
-            {leftSideRounds.map((round) => (
-              <div key={round} className="space-y-4">
+            {semifinalRounds.map((round) => (
+              <div key={`left-${round}`} className="space-y-4">
                 <h3 className="text-lg font-semibold text-center text-primary">
-                  {getRoundName(round, totalRounds)}
+                  {getRoundName(round, totalRounds)} - Left
                 </h3>
-                <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.max(1, groupedMatches[round]?.length || 0)}, 1fr)` }}>
-                  {groupedMatches[round]?.map((match) => (
+                <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.max(1, leftSideMatches[round]?.length || 0)}, 1fr)` }}>
+                  {leftSideMatches[round]?.map((match) => (
                     <Card 
                       key={match.id} 
                       className="p-3 bg-card/50 backdrop-blur-sm border-pink-secondary/20 hover:border-primary/30 transition-all duration-300"
@@ -267,13 +278,13 @@ export const TournamentBracket = () => {
 
           {/* Right Side */}
           <div className="flex-1 space-y-8">
-            {rightSideRounds.map((round) => (
-              <div key={round} className="space-y-4">
+            {semifinalRounds.map((round) => (
+              <div key={`right-${round}`} className="space-y-4">
                 <h3 className="text-lg font-semibold text-center text-primary">
-                  {getRoundName(round, totalRounds)}
+                  {getRoundName(round, totalRounds)} - Right
                 </h3>
-                <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.max(1, groupedMatches[round]?.length || 0)}, 1fr)` }}>
-                  {groupedMatches[round]?.map((match) => (
+                <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.max(1, rightSideMatches[round]?.length || 0)}, 1fr)` }}>
+                  {rightSideMatches[round]?.map((match) => (
                     <Card 
                       key={match.id} 
                       className="p-3 bg-card/50 backdrop-blur-sm border-pink-secondary/20 hover:border-primary/30 transition-all duration-300"
