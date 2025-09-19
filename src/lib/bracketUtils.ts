@@ -106,8 +106,12 @@ export const assignParticipantToBracket = async (participant: Participant) => {
     );
     
     if (unpairedParticipants.length >= 2) {
-      // Shuffle participants for random pairing
-      const shuffled = [...unpairedParticipants].sort(() => Math.random() - 0.5);
+      // Use Fisher-Yates shuffle for better randomization
+      const shuffled = [...unpairedParticipants];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
       
       // Create teams from pairs
       for (let i = 0; i < shuffled.length - 1; i += 2) {
@@ -126,48 +130,154 @@ export const assignParticipantToBracket = async (participant: Participant) => {
 
         if (teamError) throw teamError;
 
-        // Find available match slot in round 1
-        const { data: availableMatch, error: matchError } = await supabase
+        // Find all available bracket slots in round 1
+        const { data: allRound1Matches, error: matchesError } = await supabase
           .from('matches')
           .select('*')
           .eq('round', 1)
-          .is('team1_id', null)
-          .limit(1)
-          .single();
+          .order('match_number', { ascending: true });
 
-        if (!matchError && availableMatch) {
-          // Assign team to match slot
+        if (matchesError) throw matchesError;
+
+        // Create list of all available slots (team1 and team2 positions)
+        const availableSlots: Array<{matchId: string, position: 'team1' | 'team2'}> = [];
+
+        allRound1Matches?.forEach(match => {
+          if (!match.team1_id) {
+            availableSlots.push({ matchId: match.id, position: 'team1' });
+          }
+          if (!match.team2_id) {
+            availableSlots.push({ matchId: match.id, position: 'team2' });
+          }
+        });
+
+        if (availableSlots.length > 0) {
+          // Randomly select one of the available slots
+          const randomIndex = Math.floor(Math.random() * availableSlots.length);
+          const selectedSlot = availableSlots[randomIndex];
+
+          // Assign team to the randomly selected slot
+          const updateField = selectedSlot.position === 'team1' ? 'team1_id' : 'team2_id';
           const { error: updateError } = await supabase
             .from('matches')
-            .update({ team1_id: newTeam.id })
-            .eq('id', availableMatch.id);
+            .update({ [updateField]: newTeam.id })
+            .eq('id', selectedSlot.matchId);
 
           if (updateError) throw updateError;
-        } else {
-          // Try to find a match with only team1 filled to add as team2
-          const { data: partialMatch, error: partialError } = await supabase
-            .from('matches')
-            .select('*')
-            .eq('round', 1)
-            .not('team1_id', 'is', null)
-            .is('team2_id', null)
-            .limit(1)
-            .single();
-
-          if (!partialError && partialMatch) {
-            const { error: updateError } = await supabase
-              .from('matches')
-              .update({ team2_id: newTeam.id })
-              .eq('id', partialMatch.id);
-
-            if (updateError) throw updateError;
-          }
         }
       }
     }
 
   } catch (error) {
     console.error('Error assigning participant to bracket:', error);
+    throw error;
+  }
+};
+
+// Regenerate all teams and randomly assign to bracket
+export const regenerateTeamsAndBracket = async () => {
+  try {
+    // Get all participants
+    const { data: allParticipants, error: participantsError } = await supabase
+      .from('participants')
+      .select('*')
+      .order('created_at', { ascending: true });
+
+    if (participantsError) throw participantsError;
+
+    if (!allParticipants || allParticipants.length === 0) {
+      throw new Error('No participants found');
+    }
+
+    if (allParticipants.length % 2 !== 0) {
+      throw new Error('Need an even number of participants to form teams');
+    }
+
+    // Clear existing teams and match assignments
+    await supabase.from('teams').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase
+      .from('matches')
+      .update({ team1_id: null, team2_id: null, winner_id: null, status: 'pending' })
+      .neq('id', '00000000-0000-0000-0000-000000000000');
+
+    // Fisher-Yates shuffle for optimal randomization
+    const shuffledParticipants = [...allParticipants];
+    for (let i = shuffledParticipants.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledParticipants[i], shuffledParticipants[j]] = [shuffledParticipants[j], shuffledParticipants[i]];
+    }
+
+    // Create teams from shuffled participants
+    const newTeams = [];
+    for (let i = 0; i < shuffledParticipants.length - 1; i += 2) {
+      const player1 = shuffledParticipants[i];
+      const player2 = shuffledParticipants[i + 1];
+
+      const { data: newTeam, error: teamError } = await supabase
+        .from('teams')
+        .insert({
+          player1_id: player1.id,
+          player2_id: player2.id
+        })
+        .select()
+        .single();
+
+      if (teamError) throw teamError;
+      newTeams.push(newTeam);
+    }
+
+    // Get all round 1 matches
+    const { data: round1Matches, error: matchesError } = await supabase
+      .from('matches')
+      .select('*')
+      .eq('round', 1)
+      .order('match_number', { ascending: true });
+
+    if (matchesError) throw matchesError;
+
+    // Create array of all bracket positions
+    const bracketPositions: Array<{matchId: string, position: 'team1' | 'team2'}> = [];
+    round1Matches?.forEach(match => {
+      bracketPositions.push({ matchId: match.id, position: 'team1' });
+      bracketPositions.push({ matchId: match.id, position: 'team2' });
+    });
+
+    // Shuffle bracket positions
+    for (let i = bracketPositions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [bracketPositions[i], bracketPositions[j]] = [bracketPositions[j], bracketPositions[i]];
+    }
+
+    // Assign teams to shuffled bracket positions
+    for (let i = 0; i < Math.min(newTeams.length, bracketPositions.length); i++) {
+      const team = newTeams[i];
+      const position = bracketPositions[i];
+
+      const updateField = position.position === 'team1' ? 'team1_id' : 'team2_id';
+      const { error: updateError } = await supabase
+        .from('matches')
+        .update({ [updateField]: team.id })
+        .eq('id', position.matchId);
+
+      if (updateError) throw updateError;
+    }
+
+    // Update tournament status to teams_generated
+    const { error: statusError } = await supabase
+      .from('tournament_state')
+      .update({ status: 'teams_generated' })
+      .neq('id', '00000000-0000-0000-0000-000000000000');
+
+    if (statusError) throw statusError;
+
+    return {
+      success: true,
+      teamsCreated: newTeams.length,
+      message: `Successfully created ${newTeams.length} teams and randomly assigned them to bracket positions`
+    };
+
+  } catch (error) {
+    console.error('Error regenerating teams and bracket:', error);
     throw error;
   }
 };
