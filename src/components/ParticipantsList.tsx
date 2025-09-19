@@ -3,8 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Trophy, Trash2 } from "lucide-react";
+import { Users, Trophy, Trash2, Shuffle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { regenerateTeamsAndBracket } from "@/lib/bracketUtils";
 
 interface Participant {
   id: string;
@@ -62,7 +63,7 @@ export const ParticipantsList = () => {
 
       // Refresh the participants list
       fetchParticipants();
-      
+
       toast({
         title: "Participant removed",
         description: `${name} has been removed from the tournament.`,
@@ -72,6 +73,27 @@ export const ParticipantsList = () => {
       toast({
         title: "Error",
         description: "Failed to remove participant. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleGenerateTeams = async () => {
+    try {
+      const result = await regenerateTeamsAndBracket();
+
+      toast({
+        title: "Teams Generated!",
+        description: result.message,
+      });
+
+      // Refresh the participants list
+      fetchParticipants();
+    } catch (error: any) {
+      console.error('Error generating teams:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate teams. Please try again.",
         variant: "destructive",
       });
     }
@@ -147,11 +169,34 @@ export const ParticipantsList = () => {
             ))}
           </div>
         )}
-        
+
+        {participants.length >= 2 && participants.length % 2 === 0 && (
+          <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-green-800 font-medium">
+                  Ready to generate teams!
+                </p>
+                <p className="text-xs text-green-600 mt-1">
+                  {participants.length} participants will form {participants.length / 2} teams
+                </p>
+              </div>
+              <Button
+                onClick={handleGenerateTeams}
+                className="bg-gradient-to-r from-primary to-pink-hot hover:from-primary/90 hover:to-pink-hot/90 text-white"
+                size="sm"
+              >
+                <Shuffle className="w-4 h-4 mr-2" />
+                Generate Teams
+              </Button>
+            </div>
+          </div>
+        )}
+
         {participants.length > 0 && participants.length % 2 !== 0 && (
           <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-sm text-yellow-800">
-              <strong>Note:</strong> You need an even number of participants to form teams. 
+              <strong>Note:</strong> You need an even number of participants to form teams.
               {participants.length % 2 !== 0 && " One more player needed!"}
             </p>
           </div>
