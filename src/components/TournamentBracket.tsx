@@ -199,27 +199,31 @@ export const TournamentBracket = () => {
         <p className="text-muted-foreground">Single elimination • Winner takes all!</p>
       </div>
 
-      <div className="relative overflow-x-auto">
-        <div className="space-y-12 max-w-4xl mx-auto">
+      <div className="relative overflow-x-auto px-4">
+        <div className="space-y-12 max-w-7xl mx-auto">
           {/* Tournament Rounds - Vertical Layout */}
-          <div className="space-y-8">
+          <div className="space-y-12">
             {semifinalRounds.map((round) => (
               <div key={round} className="space-y-6">
                 <h3 className="text-xl font-bold text-center text-primary">
                   {getRoundName(round, 4)}
                 </h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 xl:gap-12">
                   {/* Left Side */}
                   <div className="space-y-4">
                     <h4 className="text-lg font-semibold text-center text-muted-foreground">
                       Left Bracket
                     </h4>
-                    <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.max(1, leftSideMatches[round]?.length || 0)}, 1fr)` }}>
+                    <div className="grid gap-4" style={{
+                      gridTemplateColumns: leftSideMatches[round]?.length > 2
+                        ? 'repeat(2, 1fr)'
+                        : `repeat(${Math.max(1, leftSideMatches[round]?.length || 0)}, 1fr)`
+                    }}>
                       {leftSideMatches[round]?.map((match, index) => (
-                        <Card 
-                          key={match.id} 
-                          className="p-4 bg-card/50 backdrop-blur-sm border-pink-secondary/20 hover:border-primary/30 transition-all duration-300"
+                        <Card
+                          key={match.id}
+                          className="p-3 sm:p-4 bg-card/50 backdrop-blur-sm border-pink-secondary/20 hover:border-primary/30 transition-all duration-300 min-w-0"
                         >
                           <div className="space-y-3">
                             <div className="flex items-center justify-between">
@@ -236,14 +240,14 @@ export const TournamentBracket = () => {
 
                             <div className="space-y-2">
                               {/* Team 1 */}
-                              <div className={`flex items-center gap-2 p-3 rounded-lg text-sm transition-colors ${
-                                match.winner?.id === match.team1?.id 
-                                  ? 'bg-gradient-to-r from-primary/20 to-pink-hot/10 border border-primary/30' 
+                              <div className={`flex items-center gap-2 p-2 sm:p-3 rounded-lg text-xs sm:text-sm transition-colors ${
+                                match.winner?.id === match.team1?.id
+                                  ? 'bg-gradient-to-r from-primary/20 to-pink-hot/10 border border-primary/30'
                                   : 'bg-muted/30'
                               }`}>
-                                <Users className="w-4 h-4 text-primary" />
-                                <span className="font-medium">
-                                  {match.team1 
+                                <Users className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
+                                <span className="font-medium truncate">
+                                  {match.team1
                                     ? `${match.team1.player1.name} & ${match.team1.player2.name}`
                                     : 'Waiting for players...'
                                   }
@@ -253,14 +257,14 @@ export const TournamentBracket = () => {
                               <div className="text-center text-sm text-muted-foreground font-bold">VS</div>
 
                               {/* Team 2 */}
-                              <div className={`flex items-center gap-2 p-3 rounded-lg text-sm transition-colors ${
-                                match.winner?.id === match.team2?.id 
-                                  ? 'bg-gradient-to-r from-primary/20 to-pink-hot/10 border border-primary/30' 
+                              <div className={`flex items-center gap-2 p-2 sm:p-3 rounded-lg text-xs sm:text-sm transition-colors ${
+                                match.winner?.id === match.team2?.id
+                                  ? 'bg-gradient-to-r from-primary/20 to-pink-hot/10 border border-primary/30'
                                   : 'bg-muted/30'
                               }`}>
-                                <Users className="w-4 h-4 text-primary" />
-                                <span className="font-medium">
-                                  {match.team2 
+                                <Users className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
+                                <span className="font-medium truncate">
+                                  {match.team2
                                     ? `${match.team2.player1.name} & ${match.team2.player2.name}`
                                     : 'Waiting for players...'
                                   }
@@ -278,11 +282,15 @@ export const TournamentBracket = () => {
                     <h4 className="text-lg font-semibold text-center text-muted-foreground">
                       Right Bracket
                     </h4>
-                    <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.max(1, rightSideMatches[round]?.length || 0)}, 1fr)` }}>
+                    <div className="grid gap-4" style={{
+                      gridTemplateColumns: rightSideMatches[round]?.length > 2
+                        ? 'repeat(2, 1fr)'
+                        : `repeat(${Math.max(1, rightSideMatches[round]?.length || 0)}, 1fr)`
+                    }}>
                       {rightSideMatches[round]?.map((match, index) => (
-                        <Card 
-                          key={match.id} 
-                          className="p-4 bg-card/50 backdrop-blur-sm border-pink-secondary/20 hover:border-primary/30 transition-all duration-300"
+                        <Card
+                          key={match.id}
+                          className="p-3 sm:p-4 bg-card/50 backdrop-blur-sm border-pink-secondary/20 hover:border-primary/30 transition-all duration-300 min-w-0"
                         >
                           <div className="space-y-3">
                             <div className="flex items-center justify-between">
@@ -299,14 +307,14 @@ export const TournamentBracket = () => {
 
                             <div className="space-y-2">
                               {/* Team 1 */}
-                              <div className={`flex items-center gap-2 p-3 rounded-lg text-sm transition-colors ${
-                                match.winner?.id === match.team1?.id 
-                                  ? 'bg-gradient-to-r from-primary/20 to-pink-hot/10 border border-primary/30' 
+                              <div className={`flex items-center gap-2 p-2 sm:p-3 rounded-lg text-xs sm:text-sm transition-colors ${
+                                match.winner?.id === match.team1?.id
+                                  ? 'bg-gradient-to-r from-primary/20 to-pink-hot/10 border border-primary/30'
                                   : 'bg-muted/30'
                               }`}>
-                                <Users className="w-4 h-4 text-primary" />
-                                <span className="font-medium">
-                                  {match.team1 
+                                <Users className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
+                                <span className="font-medium truncate">
+                                  {match.team1
                                     ? `${match.team1.player1.name} & ${match.team1.player2.name}`
                                     : 'Waiting for players...'
                                   }
@@ -316,14 +324,14 @@ export const TournamentBracket = () => {
                               <div className="text-center text-sm text-muted-foreground font-bold">VS</div>
 
                               {/* Team 2 */}
-                              <div className={`flex items-center gap-2 p-3 rounded-lg text-sm transition-colors ${
-                                match.winner?.id === match.team2?.id 
-                                  ? 'bg-gradient-to-r from-primary/20 to-pink-hot/10 border border-primary/30' 
+                              <div className={`flex items-center gap-2 p-2 sm:p-3 rounded-lg text-xs sm:text-sm transition-colors ${
+                                match.winner?.id === match.team2?.id
+                                  ? 'bg-gradient-to-r from-primary/20 to-pink-hot/10 border border-primary/30'
                                   : 'bg-muted/30'
                               }`}>
-                                <Users className="w-4 h-4 text-primary" />
-                                <span className="font-medium">
-                                  {match.team2 
+                                <Users className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
+                                <span className="font-medium truncate">
+                                  {match.team2
                                     ? `${match.team2.player1.name} & ${match.team2.player2.name}`
                                     : 'Waiting for players...'
                                   }
@@ -341,9 +349,9 @@ export const TournamentBracket = () => {
           </div>
 
           {/* Final Match */}
-          <div className="flex flex-col items-center space-y-4">
-            <h3 className="text-2xl font-bold text-center text-primary">🏆 Championship Final 🏆</h3>
-            <Card className="p-6 bg-gradient-to-r from-primary/10 to-pink-hot/10 border-primary/30 min-w-[320px] max-w-md">
+          <div className="flex flex-col items-center space-y-4 pt-8">
+            <h3 className="text-xl sm:text-2xl font-bold text-center text-primary">🏆 Championship Final 🏆</h3>
+            <Card className="p-4 sm:p-6 bg-gradient-to-r from-primary/10 to-pink-hot/10 border-primary/30 w-full max-w-md mx-auto">
               <div className="space-y-4">
                 <div className="flex items-center justify-center">
                   <Trophy className="w-8 h-8 text-yellow-500" />
@@ -351,14 +359,14 @@ export const TournamentBracket = () => {
 
                 <div className="space-y-3">
                   {/* Team 1 */}
-                  <div className={`flex items-center gap-3 p-4 rounded-lg text-sm transition-colors ${
-                    finalMatch.winner?.id === finalMatch.team1?.id 
-                      ? 'bg-gradient-to-r from-primary/30 to-pink-hot/20 border border-primary/50' 
+                  <div className={`flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg text-sm transition-colors ${
+                    finalMatch.winner?.id === finalMatch.team1?.id
+                      ? 'bg-gradient-to-r from-primary/30 to-pink-hot/20 border border-primary/50'
                       : 'bg-muted/30'
                   }`}>
-                    <Users className="w-5 h-5 text-primary" />
-                    <span className="font-semibold">
-                      {finalMatch.team1 
+                    <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+                    <span className="font-semibold truncate">
+                      {finalMatch.team1
                         ? `${finalMatch.team1.player1.name} & ${finalMatch.team1.player2.name}`
                         : 'Waiting for finalist...'
                       }
@@ -368,14 +376,14 @@ export const TournamentBracket = () => {
                   <div className="text-center text-lg text-muted-foreground font-bold">VS</div>
 
                   {/* Team 2 */}
-                  <div className={`flex items-center gap-3 p-4 rounded-lg text-sm transition-colors ${
-                    finalMatch.winner?.id === finalMatch.team2?.id 
-                      ? 'bg-gradient-to-r from-primary/30 to-pink-hot/20 border border-primary/50' 
+                  <div className={`flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg text-sm transition-colors ${
+                    finalMatch.winner?.id === finalMatch.team2?.id
+                      ? 'bg-gradient-to-r from-primary/30 to-pink-hot/20 border border-primary/50'
                       : 'bg-muted/30'
                   }`}>
-                    <Users className="w-5 h-5 text-primary" />
-                    <span className="font-semibold">
-                      {finalMatch.team2 
+                    <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+                    <span className="font-semibold truncate">
+                      {finalMatch.team2
                         ? `${finalMatch.team2.player1.name} & ${finalMatch.team2.player2.name}`
                         : 'Waiting for finalist...'
                       }
