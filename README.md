@@ -19,25 +19,34 @@ A beer pong tournament management system with random team pairing and single-eli
 
 ## Setup
 
-1. **Clone and install**:
+1. **Clone and install dependencies**:
    ```bash
    git clone <repository-url>
    cd pink-pong-bracket-bash
    npm install
    ```
 
-2. **Configure Supabase**:
-   - Create a new Supabase project
-   - Run the migrations in `supabase/migrations/`
-   - Update `.env` with your Supabase credentials:
-     ```
-     VITE_SUPABASE_URL=your_supabase_url
-     VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
-     ```
+2. **Configure environment variables**:
+   ```bash
+   cp .env.example .env
+   ```
+   Open `.env` and fill in your Supabase credentials:
+   - `VITE_SUPABASE_PROJECT_ID` — your Supabase project ID
+   - `VITE_SUPABASE_PUBLISHABLE_KEY` — your Supabase anon/public key
+   - `VITE_SUPABASE_URL` — your Supabase project URL (e.g. `https://<project-id>.supabase.co`)
 
-3. **Start development server**:
+3. **Set up the database**:
+   - Create a new [Supabase](https://supabase.com) project
+   - Run the migrations in `supabase/migrations/` against your project
+
+4. **Start the development server**:
    ```bash
    npm run dev
+   ```
+
+5. **Build for production**:
+   ```bash
+   npm run build
    ```
 
 ## Database Schema
