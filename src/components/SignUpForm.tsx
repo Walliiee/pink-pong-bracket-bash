@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { addParticipant } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { UserPlus, Sparkles } from "lucide-react";
-import { assignParticipantToBracket } from "@/lib/bracketUtils";
 
 interface SignUpFormProps {
   onSignUp: () => void;
@@ -52,24 +51,15 @@ export const SignUpForm = ({ onSignUp, disabled = false }: SignUpFormProps) => {
     setLoading(true);
     
     try {
-      const { data: newParticipant, error } = await supabase
-        .from('participants')
-        .insert([{ 
-          name: name.trim(),
-          age: Number(age),
-          description: description.trim()
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Automatically assign participant to bracket
-      await assignParticipantToBracket(newParticipant);
+      const newParticipant = await addParticipant({
+        name: name.trim(),
+        age: Number(age),
+        description: description.trim(),
+      });
 
       toast({
         title: "Welcome to the tournament! 🏆",
-        description: `${name} has been added to the beer pong tournament and assigned to a team!`,
+        description: `${newParticipant.name} has been added to the beer pong tournament and assigned to a team!`,
       });
 
       setName("");

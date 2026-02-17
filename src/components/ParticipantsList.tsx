@@ -1,67 +1,39 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState, useCallback } from "react";
+import { getParticipants, removeParticipant, generateTeams } from "@/lib/api";
+import type { Participant } from "@/lib/api";
+import { useSocket } from "@/hooks/useSocket";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Users, Trophy, Trash2, Shuffle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { regenerateTeamsAndBracket } from "@/lib/bracketUtils";
-
-interface Participant {
-  id: string;
-  name: string;
-  age: number | null;
-  description: string | null;
-  created_at: string;
-}
 
 export const ParticipantsList = () => {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchParticipants();
-    
-    // Subscribe to real-time updates
-    const channel = supabase
-      .channel('participants-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, () => {
-        fetchParticipants();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const fetchParticipants = async () => {
+  const fetchParticipants = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('participants')
-        .select('*')
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      setParticipants(data || []);
+      const data = await getParticipants();
+      setParticipants(data);
     } catch (error) {
-      console.error('Error fetching participants:', error);
+      console.error("Error fetching participants:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchParticipants();
+  }, [fetchParticipants]);
+
+  // Real-time: re-fetch when the server broadcasts changes
+  useSocket("participants:changed", fetchParticipants);
 
   const deleteParticipant = async (id: string, name: string) => {
     try {
-      const { error } = await supabase
-        .from('participants')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      // Refresh the participants list
+      await removeParticipant(id);
       fetchParticipants();
 
       toast({
@@ -69,7 +41,7 @@ export const ParticipantsList = () => {
         description: `${name} has been removed from the tournament.`,
       });
     } catch (error: any) {
-      console.error('Error deleting participant:', error);
+      console.error("Error deleting participant:", error);
       toast({
         title: "Error",
         description: "Failed to remove participant. Please try again.",
@@ -80,17 +52,16 @@ export const ParticipantsList = () => {
 
   const handleGenerateTeams = async () => {
     try {
-      const result = await regenerateTeamsAndBracket();
+      const result = await generateTeams();
 
       toast({
         title: "Teams Generated!",
         description: result.message,
       });
 
-      // Refresh the participants list
       fetchParticipants();
     } catch (error: any) {
-      console.error('Error generating teams:', error);
+      console.error("Error generating teams:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to generate teams. Please try again.",

@@ -1,84 +1,35 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState, useCallback } from "react";
+import { getMatches } from "@/lib/api";
+import type { Match } from "@/lib/api";
+import { useSocket } from "@/hooks/useSocket";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Users } from "lucide-react";
-
-interface Team {
-  id: string;
-  player1: { id: string; name: string };
-  player2: { id: string; name: string };
-}
-
-interface Match {
-  id: string;
-  round: number;
-  match_number: number;
-  team1?: Team;
-  team2?: Team;
-  winner?: Team;
-  status: 'pending' | 'in_progress' | 'completed';
-}
 
 export const TournamentBracket = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchMatches();
-    
-    // Subscribe to real-time updates for matches, teams, and participants
-    const channel = supabase
-      .channel('tournament-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, () => {
-        fetchMatches();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, () => {
-        fetchMatches();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, () => {
-        fetchMatches();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const fetchMatches = async () => {
+  const fetchMatches = useCallback(async () => {
     try {
-      const { data: matchesData, error } = await supabase
-        .from('matches')
-        .select(`
-          *,
-          team1:teams!matches_team1_id_fkey (
-            id,
-            player1:participants!teams_player1_id_fkey (id, name),
-            player2:participants!teams_player2_id_fkey (id, name)
-          ),
-          team2:teams!matches_team2_id_fkey (
-            id,
-            player1:participants!teams_player1_id_fkey (id, name),
-            player2:participants!teams_player2_id_fkey (id, name)
-          ),
-          winner:teams!matches_winner_id_fkey (
-            id,
-            player1:participants!teams_player1_id_fkey (id, name),
-            player2:participants!teams_player2_id_fkey (id, name)
-          )
-        `)
-        .order('round', { ascending: true })
-        .order('match_number', { ascending: true });
-
-      if (error) throw error;
-      setMatches(matchesData as any || []);
+      const data = await getMatches();
+      setMatches(data);
     } catch (error) {
-      console.error('Error fetching matches:', error);
+      console.error("Error fetching matches:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchMatches();
+  }, [fetchMatches]);
+
+  // Real-time: re-fetch when the server broadcasts changes
+  useSocket(
+    ["matches:changed", "participants:changed", "tournament:changed"],
+    fetchMatches
+  );
 
   const getRoundName = (round: number, totalRounds: number) => {
     const fromEnd = totalRounds - round + 1;
@@ -116,17 +67,7 @@ export const TournamentBracket = () => {
     );
   }
 
-  // Create a 16-team bracket structure (even with empty slots)
   const createBracketStructure = () => {
-    // Define the complete 16-team bracket structure
-    const bracketStructure = {
-      round1: { left: 4, right: 4 }, // Quarter-finals: 8 matches total (4 each side)
-      round2: { left: 2, right: 2 }, // Semi-finals: 4 matches total (2 each side) 
-      round3: { left: 1, right: 1 }, // Finals: 2 matches total (1 each side)
-      final: 1 // Championship: 1 match
-    };
-
-    // Fill with actual matches or create empty slots
     const createEmptyMatch = (round: number, matchNumber: number, side: 'left' | 'right'): Match => ({
       id: `empty-${round}-${matchNumber}-${side}`,
       round,
@@ -137,23 +78,19 @@ export const TournamentBracket = () => {
     const leftSideMatches: Record<number, Match[]> = {};
     const rightSideMatches: Record<number, Match[]> = {};
 
-    // Round 1 (8 matches - 4 left, 4 right)
     leftSideMatches[1] = [];
     rightSideMatches[1] = [];
     
-    // Fill left side round 1
     for (let i = 0; i < 4; i++) {
       const existingMatch = matches.find(m => m.round === 1 && m.match_number === i + 1);
       leftSideMatches[1].push(existingMatch || createEmptyMatch(1, i + 1, 'left'));
     }
     
-    // Fill right side round 1
     for (let i = 0; i < 4; i++) {
       const existingMatch = matches.find(m => m.round === 1 && m.match_number === i + 5);
       rightSideMatches[1].push(existingMatch || createEmptyMatch(1, i + 5, 'right'));
     }
 
-    // Round 2 (4 matches - 2 left, 2 right)
     leftSideMatches[2] = [];
     rightSideMatches[2] = [];
     
@@ -167,7 +104,6 @@ export const TournamentBracket = () => {
       rightSideMatches[2].push(existingMatch || createEmptyMatch(2, i + 3, 'right'));
     }
 
-    // Round 3 (2 matches - 1 left, 1 right) 
     leftSideMatches[3] = [];
     rightSideMatches[3] = [];
     
@@ -177,7 +113,6 @@ export const TournamentBracket = () => {
     const rightFinalMatch = matches.find(m => m.round === 3 && m.match_number === 2);
     rightSideMatches[3].push(rightFinalMatch || createEmptyMatch(3, 2, 'right'));
 
-    // Final match (round 4)
     const finalMatch = matches.find(m => m.round === 4);
 
     return { 
@@ -196,12 +131,11 @@ export const TournamentBracket = () => {
         <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-pink-hot bg-clip-text text-transparent">
           Tournament Bracket
         </h2>
-        <p className="text-muted-foreground">Single elimination • Winner takes all!</p>
+        <p className="text-muted-foreground">Single elimination - Winner takes all!</p>
       </div>
 
       <div className="relative overflow-x-auto px-4">
         <div className="space-y-12 max-w-7xl mx-auto">
-          {/* Tournament Rounds - Vertical Layout */}
           <div className="space-y-12">
             {semifinalRounds.map((round) => (
               <div key={round} className="space-y-6">
@@ -239,7 +173,6 @@ export const TournamentBracket = () => {
                             </div>
 
                             <div className="space-y-2">
-                              {/* Team 1 */}
                               <div className={`flex items-center gap-2 p-2 sm:p-3 rounded-lg text-xs sm:text-sm transition-colors ${
                                 match.winner?.id === match.team1?.id
                                   ? 'bg-gradient-to-r from-primary/20 to-pink-hot/10 border border-primary/30'
@@ -256,7 +189,6 @@ export const TournamentBracket = () => {
 
                               <div className="text-center text-sm text-muted-foreground font-bold">VS</div>
 
-                              {/* Team 2 */}
                               <div className={`flex items-center gap-2 p-2 sm:p-3 rounded-lg text-xs sm:text-sm transition-colors ${
                                 match.winner?.id === match.team2?.id
                                   ? 'bg-gradient-to-r from-primary/20 to-pink-hot/10 border border-primary/30'
@@ -306,7 +238,6 @@ export const TournamentBracket = () => {
                             </div>
 
                             <div className="space-y-2">
-                              {/* Team 1 */}
                               <div className={`flex items-center gap-2 p-2 sm:p-3 rounded-lg text-xs sm:text-sm transition-colors ${
                                 match.winner?.id === match.team1?.id
                                   ? 'bg-gradient-to-r from-primary/20 to-pink-hot/10 border border-primary/30'
@@ -323,7 +254,6 @@ export const TournamentBracket = () => {
 
                               <div className="text-center text-sm text-muted-foreground font-bold">VS</div>
 
-                              {/* Team 2 */}
                               <div className={`flex items-center gap-2 p-2 sm:p-3 rounded-lg text-xs sm:text-sm transition-colors ${
                                 match.winner?.id === match.team2?.id
                                   ? 'bg-gradient-to-r from-primary/20 to-pink-hot/10 border border-primary/30'
@@ -350,7 +280,7 @@ export const TournamentBracket = () => {
 
           {/* Final Match */}
           <div className="flex flex-col items-center space-y-4 pt-8">
-            <h3 className="text-xl sm:text-2xl font-bold text-center text-primary">🏆 Championship Final 🏆</h3>
+            <h3 className="text-xl sm:text-2xl font-bold text-center text-primary">Championship Final</h3>
             <Card className="p-4 sm:p-6 bg-gradient-to-r from-primary/10 to-pink-hot/10 border-primary/30 w-full max-w-md mx-auto">
               <div className="space-y-4">
                 <div className="flex items-center justify-center">
@@ -358,7 +288,6 @@ export const TournamentBracket = () => {
                 </div>
 
                 <div className="space-y-3">
-                  {/* Team 1 */}
                   <div className={`flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg text-sm transition-colors ${
                     finalMatch.winner?.id === finalMatch.team1?.id
                       ? 'bg-gradient-to-r from-primary/30 to-pink-hot/20 border border-primary/50'
@@ -375,7 +304,6 @@ export const TournamentBracket = () => {
 
                   <div className="text-center text-lg text-muted-foreground font-bold">VS</div>
 
-                  {/* Team 2 */}
                   <div className={`flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg text-sm transition-colors ${
                     finalMatch.winner?.id === finalMatch.team2?.id
                       ? 'bg-gradient-to-r from-primary/30 to-pink-hot/20 border border-primary/50'
@@ -394,7 +322,7 @@ export const TournamentBracket = () => {
                 {finalMatch.status === 'completed' && finalMatch.winner && (
                   <div className="pt-4 border-t border-border/50">
                     <div className="text-center">
-                      <span className="text-sm text-muted-foreground">🏆 Champions:</span>
+                      <span className="text-sm text-muted-foreground">Champions:</span>
                       <div className="font-bold text-lg text-primary">
                         {finalMatch.winner.player1.name} & {finalMatch.winner.player2.name}
                       </div>

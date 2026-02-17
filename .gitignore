@@ -15,6 +15,9 @@ dist-ssr
 # Environment
 .env
 
+# Local database
+tournament.db
+
 # Installers / archives
 *.msi
 *.zip
