@@ -76,11 +76,11 @@ export const SignUpForm = ({ onSignUp, disabled = false }: SignUpFormProps) => {
       setAge("");
       setDescription("");
       onSignUp();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error signing up:', error);
       toast({
         title: "Sign up failed",
-        description: error.message || "Something went wrong. Please try again.",
+        description: error instanceof Error ? error.message : "Something went wrong. Please try again.",
         variant: "destructive",
       });
     } finally {

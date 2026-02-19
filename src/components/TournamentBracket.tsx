@@ -72,7 +72,7 @@ export const TournamentBracket = () => {
         .order('match_number', { ascending: true });
 
       if (error) throw error;
-      setMatches(matchesData as any || []);
+      setMatches((matchesData as Match[]) || []);
     } catch (error) {
       console.error('Error fetching matches:', error);
     } finally {

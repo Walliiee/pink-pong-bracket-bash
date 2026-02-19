@@ -68,7 +68,7 @@ export const ParticipantsList = () => {
         title: "Participant removed",
         description: `${name} has been removed from the tournament.`,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting participant:', error);
       toast({
         title: "Error",
@@ -89,11 +89,11 @@ export const ParticipantsList = () => {
 
       // Refresh the participants list
       fetchParticipants();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error generating teams:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to generate teams. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to generate teams. Please try again.",
         variant: "destructive",
       });
     }
