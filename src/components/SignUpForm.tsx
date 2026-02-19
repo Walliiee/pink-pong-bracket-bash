@@ -1,27 +1,23 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { UserPlus, Sparkles } from "lucide-react";
-import { assignParticipantToBracket } from "@/lib/bracketUtils";
+import { useTournament } from "@/hooks/use-tournament";
 
-interface SignUpFormProps {
-  onSignUp: () => void;
-  disabled?: boolean;
-}
-
-export const SignUpForm = ({ onSignUp, disabled = false }: SignUpFormProps) => {
+export const SignUpForm = () => {
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
   const [description, setDescription] = useState("");
-  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { addParticipant, status } = useTournament();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const disabled = status !== "registration";
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!name.trim()) {
       toast({
         title: "Name required",
@@ -49,43 +45,16 @@ export const SignUpForm = ({ onSignUp, disabled = false }: SignUpFormProps) => {
       return;
     }
 
-    setLoading(true);
-    
-    try {
-      const { data: newParticipant, error } = await supabase
-        .from('participants')
-        .insert([{ 
-          name: name.trim(),
-          age: Number(age),
-          description: description.trim()
-        }])
-        .select()
-        .single();
+    addParticipant(name.trim(), Number(age), description.trim());
 
-      if (error) throw error;
+    toast({
+      title: "Welcome to the tournament!",
+      description: `${name} has been added to the beer pong tournament!`,
+    });
 
-      // Automatically assign participant to bracket
-      await assignParticipantToBracket(newParticipant);
-
-      toast({
-        title: "Welcome to the tournament! 🏆",
-        description: `${name} has been added to the beer pong tournament and assigned to a team!`,
-      });
-
-      setName("");
-      setAge("");
-      setDescription("");
-      onSignUp();
-    } catch (error: unknown) {
-      console.error('Error signing up:', error);
-      toast({
-        title: "Sign up failed",
-        description: error instanceof Error ? error.message : "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    setName("");
+    setAge("");
+    setDescription("");
   };
 
   return (
@@ -111,11 +80,11 @@ export const SignUpForm = ({ onSignUp, disabled = false }: SignUpFormProps) => {
               placeholder="Enter your name..."
               value={name}
               onChange={(e) => setName(e.target.value)}
-              disabled={loading || disabled}
+              disabled={disabled}
               className="transition-all duration-300 focus:ring-primary/50 focus:border-primary"
             />
           </div>
-          
+
           <div className="space-y-2">
             <label htmlFor="age" className="text-sm font-medium">
               Your Age
@@ -126,11 +95,11 @@ export const SignUpForm = ({ onSignUp, disabled = false }: SignUpFormProps) => {
               placeholder="Enter your age..."
               value={age}
               onChange={(e) => setAge(e.target.value)}
-              disabled={loading || disabled}
+              disabled={disabled}
               className="transition-all duration-300 focus:ring-primary/50 focus:border-primary"
             />
           </div>
-          
+
           <div className="space-y-2">
             <label htmlFor="description" className="text-sm font-medium">
               Three words that describe you
@@ -141,24 +110,18 @@ export const SignUpForm = ({ onSignUp, disabled = false }: SignUpFormProps) => {
               placeholder="e.g., Fun, Competitive, Energetic"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              disabled={loading || disabled}
+              disabled={disabled}
               className="transition-all duration-300 focus:ring-primary/50 focus:border-primary"
             />
           </div>
-          
-          <Button 
-            type="submit" 
-            className="w-full bg-gradient-to-r from-primary to-pink-hot hover:from-pink-hot hover:to-primary transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl" 
-            disabled={loading || disabled}
+
+          <Button
+            type="submit"
+            className="w-full bg-gradient-to-r from-primary to-pink-hot hover:from-pink-hot hover:to-primary transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+            disabled={disabled}
           >
-            {loading ? (
-              "Joining..."
-            ) : (
-              <>
-                <UserPlus className="w-4 h-4 mr-2" />
-                Join Tournament
-              </>
-            )}
+            <UserPlus className="w-4 h-4 mr-2" />
+            Join Tournament
           </Button>
 
           {disabled && (

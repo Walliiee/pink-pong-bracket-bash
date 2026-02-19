@@ -1,113 +1,40 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Users, Trophy, Trash2, Shuffle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { regenerateTeamsAndBracket } from "@/lib/bracketUtils";
-
-interface Participant {
-  id: string;
-  name: string;
-  age: number | null;
-  description: string | null;
-  created_at: string;
-}
+import { useTournament } from "@/hooks/use-tournament";
 
 export const ParticipantsList = () => {
-  const [participants, setParticipants] = useState<Participant[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { participants, removeParticipant, generateTeams } = useTournament();
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchParticipants();
-    
-    // Subscribe to real-time updates
-    const channel = supabase
-      .channel('participants-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, () => {
-        fetchParticipants();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const fetchParticipants = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('participants')
-        .select('*')
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      setParticipants(data || []);
-    } catch (error) {
-      console.error('Error fetching participants:', error);
-    } finally {
-      setLoading(false);
-    }
+  const handleDelete = (id: string, name: string) => {
+    removeParticipant(id);
+    toast({
+      title: "Participant removed",
+      description: `${name} has been removed from the tournament.`,
+    });
   };
 
-  const deleteParticipant = async (id: string, name: string) => {
+  const handleGenerateTeams = () => {
     try {
-      const { error } = await supabase
-        .from('participants')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      // Refresh the participants list
-      fetchParticipants();
-
-      toast({
-        title: "Participant removed",
-        description: `${name} has been removed from the tournament.`,
-      });
-    } catch (error: unknown) {
-      console.error('Error deleting participant:', error);
-      toast({
-        title: "Error",
-        description: "Failed to remove participant. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleGenerateTeams = async () => {
-    try {
-      const result = await regenerateTeamsAndBracket();
-
+      const result = generateTeams();
       toast({
         title: "Teams Generated!",
         description: result.message,
       });
-
-      // Refresh the participants list
-      fetchParticipants();
     } catch (error: unknown) {
-      console.error('Error generating teams:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate teams. Please try again.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to generate teams. Please try again.",
         variant: "destructive",
       });
     }
   };
-
-  if (loading) {
-    return (
-      <Card className="bg-gradient-to-br from-card/80 to-pink-soft/30 backdrop-blur-sm border-pink-secondary/30">
-        <CardContent className="p-6">
-          <div className="animate-pulse text-center">Loading participants...</div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card className="bg-gradient-to-br from-card/80 to-pink-soft/30 backdrop-blur-sm border-pink-secondary/30">
@@ -131,7 +58,7 @@ export const ParticipantsList = () => {
         ) : (
           <div className="grid gap-2 max-h-64 overflow-y-auto">
             {participants.map((participant, index) => (
-              <div 
+              <div
                 key={participant.id}
                 className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border/30 hover:border-primary/30 transition-colors"
               >
@@ -159,7 +86,9 @@ export const ParticipantsList = () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => deleteParticipant(participant.id, participant.name)}
+                    onClick={() =>
+                      handleDelete(participant.id, participant.name)
+                    }
                     className="text-destructive hover:text-destructive hover:bg-destructive/10"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -178,7 +107,8 @@ export const ParticipantsList = () => {
                   Ready to generate teams!
                 </p>
                 <p className="text-xs text-green-600 mt-1">
-                  {participants.length} participants will form {participants.length / 2} teams
+                  {participants.length} participants will form{" "}
+                  {participants.length / 2} teams
                 </p>
               </div>
               <Button
@@ -196,8 +126,8 @@ export const ParticipantsList = () => {
         {participants.length > 0 && participants.length % 2 !== 0 && (
           <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-sm text-yellow-800">
-              <strong>Note:</strong> You need an even number of participants to form teams.
-              {participants.length % 2 !== 0 && " One more player needed!"}
+              <strong>Note:</strong> You need an even number of participants to
+              form teams. One more player needed!
             </p>
           </div>
         )}
