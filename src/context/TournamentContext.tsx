@@ -3,9 +3,11 @@ import type { Participant, Team, Match, TournamentStatus } from "@/lib/types";
 import { shuffle, buildBracketMatches, assignTeamsToBracket } from "@/lib/bracketUtils";
 import { TournamentContext } from "@/context/tournament-context-value";
 
-let nextId = 1;
 function generateId(): string {
-  return `local-${nextId++}-${Date.now()}`;
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
 export function TournamentProvider({ children }: { children: ReactNode }) {

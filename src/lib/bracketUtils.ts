@@ -2,6 +2,11 @@ import type { Team, Match } from "@/lib/types";
 
 let matchIdCounter = 1;
 
+/** Reset match ID counter (useful for tests / hot reloads) */
+export function resetMatchIds() {
+  matchIdCounter = 1;
+}
+
 /** Fisher-Yates shuffle */
 export function shuffle<T>(arr: T[]): T[] {
   for (let i = arr.length - 1; i > 0; i--) {
@@ -16,6 +21,7 @@ export function shuffle<T>(arr: T[]): T[] {
  * Round 1: 8 matches, Round 2: 4, Round 3: 2, Round 4 (final): 1
  */
 export function buildBracketMatches(): Match[] {
+  resetMatchIds();
   const matches: Match[] = [];
   const roundSizes = [8, 4, 2, 1];
 
