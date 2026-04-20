@@ -2,11 +2,25 @@
 
 **The ultimate beer pong tournament bracket manager.** Sign up, get randomly paired with a teammate, and battle through a single-elimination bracket for glory.
 
+[![Deploy to GitHub Pages](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-2e37ff?style=flat-square&logo=github)](https://walliiee.github.io/pink-pong-bracket-bash/)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Walliiee/pink-pong-bracket-bash)
+
 ---
 
-## 📸 Screenshots
+## 📸 Screenshots / Demo
 
-> **Add a screenshot here** — a bracket mid-tournament or the hero landing page works great.
+> **Record a quick screen capture and drop it here.**
+>
+> A short 10–20 second GIF showing:
+> 1. Players signing up
+> 2. Teams being generated
+> 3. The bracket appearing
+>
+> **How to record:** Use [ScreenToGif](https://www.screentogif.com/) (Windows), [LiceCap](https://www.cockos.com/licecap/) (Mac/Windows), or your OS built-in screen recorder. Save as GIF or MP4 and drag it below.
+>
+> ```
+> [INSERT YOUR DEMO GIF/MP4 HERE]
+> ```
 
 ---
 
@@ -90,17 +104,24 @@ VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
 src/
 ├── components/
 │   ├── SignUpForm.tsx        # Player registration form
-│   ├── ParticipantsList.tsx # View & manage participants, generate teams
+│   ├── ParticipantsList.tsx  # View & manage participants, generate teams
 │   └── TournamentBracket.tsx # Visual bracket display
 ├── context/
 │   └── TournamentContext.tsx # Global tournament state
 ├── hooks/
-│   └── use-tournament.ts     # Tournament logic hooks
+│   └── use-tournament.ts    # Tournament logic hooks
 ├── lib/
-│   └── types.ts              # TypeScript type definitions
+│   ├── types.ts             # TypeScript type definitions
+│   └── bracketUtils.ts      # Bracket building & shuffling logic
 └── pages/
-    └── Index.tsx             # Main landing page
+    └── Index.tsx            # Main landing page
 ```
+
+---
+
+## 🤝 Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup instructions, dev scripts, and PR guidelines.
 
 ---
 
