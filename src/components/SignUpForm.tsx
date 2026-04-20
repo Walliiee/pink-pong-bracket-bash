@@ -202,7 +202,7 @@ export const SignUpForm = () => {
               Join Tournament
             </Button>
 
-            <{disabled && (
+            {disabled && (
               <p className="text-sm text-center text-muted-foreground">
                 Registration is currently closed.
               </p>
