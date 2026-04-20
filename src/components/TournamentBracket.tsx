@@ -1,12 +1,91 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trophy, Users, Crown, Sparkles } from "lucide-react";
+import { Trophy, Users, Crown, Sparkles, RotateCcw } from "lucide-react";
 import { useTournament } from "@/hooks/use-tournament";
-import type { Match } from "@/lib/types";
+import type { Team, Match } from "@/lib/types";
+
+/* ─── CSS Confetti ─── */
+const confettiStyles = `
+@keyframes confettiFall {
+  0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+@keyframes confettiSway {
+  0%, 100% { margin-left: 0; }
+  50% { margin-left: 30px; }
+}
+.confetti-piece {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  top: -10px;
+  z-index: 9999;
+  pointer-events: none;
+  animation: confettiFall 3s ease-in forwards, confettiSway 1.5s ease-in-out infinite;
+}
+`;
+
+function ConfettiOverlay({ champion }: { champion: Team }) {
+  const colors = ['#FFD700', '#FF69B4', '#00CED1', '#FFA500', '#7B68EE', '#32CD32', '#FF4500', '#1E90FF'];
+  const pieces = Array.from({ length: 50 }, (_, i) => ({
+    left: `${Math.random() * 100}%`,
+    color: colors[i % colors.length],
+    delay: `${Math.random() * 2}s`,
+    duration: `${2 + Math.random() * 2}s`,
+    size: `${6 + Math.random() * 10}px`,
+    shape: i % 3 === 0 ? '50%' : i % 3 === 1 ? '0' : '2px',
+  }));
+
+  return (
+    <>
+      <style>{confettiStyles}</style>
+      {/* Confetti pieces */}
+      {pieces.map((p, i) => (
+        <div
+          key={i}
+          className="confetti-piece"
+          style={{
+            left: p.left,
+            backgroundColor: p.color,
+            animationDelay: p.delay,
+            animationDuration: p.duration,
+            width: p.size,
+            height: p.size,
+            borderRadius: p.shape,
+          }}
+        />
+      ))}
+
+      {/* Winner overlay */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="text-center p-8 md:p-12 max-w-lg mx-4 animate-bounce">
+          <div className="text-8xl md:text-9xl mb-4">🏆</div>
+          <div className="text-5xl md:text-6xl font-black text-white mb-2">
+            {champion.player1.name} & {champion.player2.name}
+          </div>
+          <div className="text-3xl md:text-4xl font-bold text-yellow-300 tracking-widest mb-6">
+            CHAMPION!
+          </div>
+          <p className="text-lg text-white/80 mb-8">
+            Congratulations on winning the Pink Pong Birthday Tournament!
+          </p>
+          <button onClick={resetTournament}
+            className="px-8 py-3 bg-gradient-to-r from-primary to-pink-hot text-white font-bold rounded-full text-lg hover:scale-105 transition-transform shadow-2xl"
+          >
+            <RotateCcw className="w-5 h-5 inline mr-2" />
+            Play Again
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
 
 export const TournamentBracket = () => {
-  const { matches } = useTournament();
+  const { matches, status, setMatchWinner, resetTournament } = useTournament();
+  const [selectedMatch, setSelectedMatch] = useState<string | null>(null);
 
   const getRoundName = (round: number, totalRounds: number) => {
     const fromEnd = totalRounds - round + 1;
@@ -16,7 +95,6 @@ export const TournamentBracket = () => {
     return `Round ${round}`;
   };
 
-  // Check if tournament is complete (final match has a winner)
   const isTournamentComplete = () => {
     const finalMatch = matches.find((m) => m.round === 4);
     return finalMatch?.status === "completed" && finalMatch?.winner;
@@ -27,6 +105,7 @@ export const TournamentBracket = () => {
     return finalMatch?.winner;
   };
 
+  // Empty state — no bracket yet
   if (matches.length === 0) {
     return (
       <Card className="p-8 text-center bg-gradient-to-br from-pink-soft/50 to-background border-pink-secondary/30">
@@ -36,10 +115,9 @@ export const TournamentBracket = () => {
           </div>
           <div className="relative">
             <Trophy className="w-16 h-16 mx-auto mb-4 text-primary animate-pulse" />
-            <h3 className="text-2xl font-bold mb-2">Tournament Not Started</h3>
+            <h3 className="text-2xl font-bold mb-2">Generate the Bracket to See Matchups</h3>
             <p className="text-muted-foreground max-w-md mx-auto">
-              The tournament bracket will appear here once teams are generated and
-              matches are created.
+              The tournament bracket will appear here once teams are generated and matches are created.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-2">
               <Badge variant="secondary" className="px-3 py-1">
@@ -61,85 +139,12 @@ export const TournamentBracket = () => {
     );
   }
 
-  // Tournament Complete - Show Winner Celebration!
+  // Tournament Complete — Show Winner Celebration!
   if (isTournamentComplete()) {
     const champions = getChampions();
-    return (
-      <div className="space-y-8">
-        {/* Winner Celebration Banner */}
-        <div className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-pink-hot/20 to-primary/20 animate-pulse" />
-          <div className="relative bg-gradient-to-br from-primary/90 to-pink-hot/90 rounded-2xl p-8 text-center text-white shadow-2xl">
-            {/* Confetti effect using CSS */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              {[...Array(20)].map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute w-2 h-2 rounded-full animate-bounce"
-                  style={{
-                    left: `${Math.random() * 100}%`,
-                    top: `${Math.random() * 100}%`,
-                    backgroundColor: ['#FFD700', '#FFA500', '#FF69B4', '#00CED1', '#32CD32'][i % 5],
-                    animationDelay: `${Math.random() * 2}s`,
-                    animationDuration: `${1 + Math.random()}s`,
-                  }}
-                />
-              ))}
-            </div>
-            
-            <div className="relative">
-              <div className="flex justify-center mb-4">
-                <div className="relative">
-                  <Crown className="w-20 h-20 text-yellow-300 animate-bounce" />
-                  <Sparkles className="absolute -top-2 -right-2 w-8 h-8 text-yellow-200 animate-pulse" />
-                  <Sparkles className="absolute -bottom-2 -left-2 w-6 h-6 text-yellow-200 animate-pulse" style={{ animationDelay: '0.5s' }} />
-                </div>
-              </div>
-              
-              <h2 className="text-4xl md:text-5xl font-bold mb-2">🏆 CHAMPIONS 🏆</h2>
-              <div className="text-xl md:text-2xl font-semibold mb-4">
-                {champions && (
-                  <div className="flex flex-col items-center gap-2">
-                    <span>{champions.player1.name}</span>
-                    <span className="text-lg opacity-80">&</span>
-                    <span>{champions.player2.name}</span>
-                  </div>
-                )}
-              </div>
-              <p className="text-lg opacity-90">Congratulations on winning the Pink Pong Birthday Tournament!</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Mini bracket showing final result */}
-        <div className="text-center">
-          <h3 className="text-xl font-bold mb-4 text-muted-foreground">Final Results</h3>
-          <Card className="p-6 max-w-md mx-auto bg-gradient-to-br from-card/80 to-pink-soft/20">
-            <div className="space-y-4">
-              {matches.filter(m => m.round >= 3).map((match) => (
-                <div key={match.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {match.round === 4 ? 'Final' : `Semi ${match.match_number}`}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm ${match.winner?.id === match.team1?.id ? 'font-bold text-primary' : ''}`}>
-                      {match.team1 ? `${match.team1.player1.name} & ${match.team1.player2.name}` : 'TBD'}
-                    </span>
-                    <span className="text-muted-foreground">vs</span>
-                    <span className={`text-sm ${match.winner?.id === match.team2?.id ? 'font-bold text-primary' : ''}`}>
-                      {match.team2 ? `${match.team2.player1.name} & ${match.team2.player2.name}` : 'TBD'}
-                    </span>
-                  </div>
-                  {match.winner && (
-                    <Trophy className="w-4 h-4 text-yellow-500" />
-                  )}
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-      </div>
-    );
+    if (champions) {
+      return <ConfettiOverlay champion={champions} />;
+    }
   }
 
   const createBracketStructure = () => {
@@ -161,125 +166,108 @@ export const TournamentBracket = () => {
     leftSideMatches[1] = [];
     rightSideMatches[1] = [];
     for (let i = 0; i < 4; i++) {
-      const existing = matches.find(
-        (m) => m.round === 1 && m.match_number === i + 1,
-      );
-      leftSideMatches[1].push(
-        existing || createEmptyMatch(1, i + 1, "left"),
-      );
+      const existing = matches.find((m) => m.round === 1 && m.match_number === i + 1);
+      leftSideMatches[1].push(existing || createEmptyMatch(1, i + 1, "left"));
     }
     for (let i = 0; i < 4; i++) {
-      const existing = matches.find(
-        (m) => m.round === 1 && m.match_number === i + 5,
-      );
-      rightSideMatches[1].push(
-        existing || createEmptyMatch(1, i + 5, "right"),
-      );
+      const existing = matches.find((m) => m.round === 1 && m.match_number === i + 5);
+      rightSideMatches[1].push(existing || createEmptyMatch(1, i + 5, "right"));
     }
 
     // Round 2 (4 matches - 2 left, 2 right)
     leftSideMatches[2] = [];
     rightSideMatches[2] = [];
     for (let i = 0; i < 2; i++) {
-      const existing = matches.find(
-        (m) => m.round === 2 && m.match_number === i + 1,
-      );
-      leftSideMatches[2].push(
-        existing || createEmptyMatch(2, i + 1, "left"),
-      );
+      const existing = matches.find((m) => m.round === 2 && m.match_number === i + 1);
+      leftSideMatches[2].push(existing || createEmptyMatch(2, i + 1, "left"));
     }
     for (let i = 0; i < 2; i++) {
-      const existing = matches.find(
-        (m) => m.round === 2 && m.match_number === i + 3,
-      );
-      rightSideMatches[2].push(
-        existing || createEmptyMatch(2, i + 3, "right"),
-      );
+      const existing = matches.find((m) => m.round === 2 && m.match_number === i + 3);
+      rightSideMatches[2].push(existing || createEmptyMatch(2, i + 3, "right"));
     }
 
     // Round 3 (2 matches - 1 left, 1 right)
     leftSideMatches[3] = [];
     rightSideMatches[3] = [];
-    const leftFinal = matches.find(
-      (m) => m.round === 3 && m.match_number === 1,
-    );
+    const leftFinal = matches.find((m) => m.round === 3 && m.match_number === 1);
     leftSideMatches[3].push(leftFinal || createEmptyMatch(3, 1, "left"));
-    const rightFinal = matches.find(
-      (m) => m.round === 3 && m.match_number === 2,
-    );
+    const rightFinal = matches.find((m) => m.round === 3 && m.match_number === 2);
     rightSideMatches[3].push(rightFinal || createEmptyMatch(3, 2, "right"));
 
     // Final match (round 4)
-    const finalMatch =
-      matches.find((m) => m.round === 4) || createEmptyMatch(4, 1, "left");
+    const finalMatch = matches.find((m) => m.round === 4) || createEmptyMatch(4, 1, "left");
 
-    return {
-      leftSideMatches,
-      rightSideMatches,
-      finalMatch,
-      semifinalRounds: [1, 2, 3],
-    };
+    return { leftSideMatches, rightSideMatches, finalMatch, semifinalRounds: [1, 2, 3] };
   };
 
-  const { leftSideMatches, rightSideMatches, finalMatch, semifinalRounds } =
-    createBracketStructure();
+  const { leftSideMatches, rightSideMatches, finalMatch, semifinalRounds } = createBracketStructure();
 
-  const renderMatchCard = (match: Match, index: number) => (
-    <Card
-      key={match.id}
-      className="p-2 sm:p-3 bg-card/50 backdrop-blur-sm border-pink-secondary/20 hover:border-primary/30 transition-all duration-300 min-w-0"
-    >
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Badge
-            variant={match.status === "completed" ? "default" : "secondary"}
-            className="text-xs px-1.5 py-0.5"
-          >
-            {match.id.startsWith("empty-")
-              ? `M${index + 1}`
-              : `M${match.match_number}`}
-          </Badge>
-          {match.status === "completed" && match.winner && (
-            <Trophy className="w-3 h-3 text-yellow-500" />
-          )}
-        </div>
+  const handleSelectWinner = (matchId: string, team: Team) => {
+    setMatchWinner(matchId, team);
+    setSelectedMatch(null);
+  };
 
-        <div className="space-y-1">
-          <div
-            className={`flex items-center gap-1 p-1.5 sm:p-2 rounded text-xs transition-colors ${
-              match.winner?.id === match.team1?.id
-                ? "bg-gradient-to-r from-primary/20 to-pink-hot/10 border border-primary/30"
-                : "bg-muted/30"
-            }`}
-          >
-            <Users className="w-3 h-3 text-primary flex-shrink-0" />
-            <span className="font-medium truncate leading-tight">
-              {match.team1
-                ? `${match.team1.player1.name} & ${match.team1.player2.name}`
-                : "Waiting..."}
-            </span>
+  const renderMatchCard = (match: Match, index: number) => {
+    const isSelectable = match.team1 && match.team2 && match.status !== "completed";
+    const isSelected = selectedMatch === match.id;
+
+    return (
+      <Card
+        key={match.id}
+        className={`p-2 sm:p-3 backdrop-blur-sm transition-all duration-300 min-w-0 ${
+          match.status === "completed"
+            ? "bg-card/80 border-primary/40"
+            : isSelectable
+            ? "bg-card/60 border-pink-hot/40 cursor-pointer hover:border-primary/60"
+            : "bg-card/50 border-pink-secondary/20"
+        }`}
+        onClick={() => isSelectable && setSelectedMatch(isSelected ? null : match.id)}
+      >
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Badge
+              variant={match.status === "completed" ? "default" : "secondary"}
+              className="text-xs px-1.5 py-0.5"
+            >
+              {match.id.startsWith("empty-") ? `M${index + 1}` : `M${match.match_number}`}
+            </Badge>
+            {match.status === "completed" && match.winner && (
+              <Trophy className="w-3 h-3 text-yellow-500" />
+            )}
           </div>
 
-          <div className="text-center text-xs text-muted-foreground font-bold py-0.5">VS</div>
+          <div className="space-y-1">
+            {[match.team1, match.team2].map((team, teamIdx) => {
+              const isWinner = match.winner?.id === team?.id;
+              const canClick = isSelected && team && match.status !== "completed";
 
-          <div
-            className={`flex items-center gap-1 p-1.5 sm:p-2 rounded text-xs transition-colors ${
-              match.winner?.id === match.team2?.id
-                ? "bg-gradient-to-r from-primary/20 to-pink-hot/10 border border-primary/30"
-                : "bg-muted/30"
-            }`}
-          >
-            <Users className="w-3 h-3 text-primary flex-shrink-0" />
-            <span className="font-medium truncate leading-tight">
-              {match.team2
-                ? `${match.team2.player1.name} & ${match.team2.player2.name}`
-                : "Waiting..."}
-            </span>
+              return (
+                <div
+                  key={teamIdx}
+                  className={`flex items-center gap-1 p-1.5 sm:p-2 rounded text-xs transition-colors ${
+                    isWinner
+                      ? "bg-gradient-to-r from-primary/20 to-pink-hot/10 border border-primary/30"
+                      : canClick
+                      ? "bg-pink-soft/30 border border-pink-hot/30 cursor-pointer hover:bg-pink-hot/20"
+                      : "bg-muted/30"
+                  }`}
+                  onClick={canClick ? (e) => { e.stopPropagation(); handleSelectWinner(match.id, team!); } : undefined}
+                >
+                  <Users className="w-3 h-3 text-primary flex-shrink-0" />
+                  <span className={`font-medium truncate leading-tight ${isWinner ? 'text-primary' : ''}`}>
+                    {team ? `${team.player1.name} & ${team.player2.name}` : "Waiting..."}
+                  </span>
+                  {isSelected && team && match.status !== "completed" && (
+                    <span className="ml-auto text-[10px] text-pink-hot font-bold">TAP</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
-      </div>
-    </Card>
-  );
+      </Card>
+    );
+  };
 
   return (
     <div className="space-y-6 md:space-y-8">
@@ -288,218 +276,145 @@ export const TournamentBracket = () => {
           Tournament Bracket
         </h2>
         <p className="text-sm md:text-base text-muted-foreground">
-          Single elimination - Winner takes all!
+          Tap a match to select the winner
         </p>
       </div>
 
-      <div className="relative">
-        {/* Mobile: Horizontal scroll wrapper */}
-        <div className="lg:hidden overflow-x-auto pb-4 -mx-4 px-4">
-          <div className="min-w-[800px] space-y-6">
-            {semifinalRounds.map((round) => (
-              <div key={round} className="space-y-3">
-                <h3 className="text-base font-bold text-center text-primary">
-                  {getRoundName(round, 4)}
-                </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Left Side */}
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-center text-muted-foreground uppercase tracking-wider">
-                      Left
-                    </h4>
-                    <div
-                      className="grid gap-2"
-                      style={{
-                        gridTemplateColumns:
-                          (leftSideMatches[round]?.length ?? 0) > 2
-                            ? "repeat(2, 1fr)"
-                            : `repeat(${Math.max(1, leftSideMatches[round]?.length ?? 0)}, 1fr)`,
-                      }}
-                    >
-                      {leftSideMatches[round]?.map((match, index) =>
-                        renderMatchCard(match, index),
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Right Side */}
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-center text-muted-foreground uppercase tracking-wider">
-                      Right
-                    </h4>
-                    <div
-                      className="grid gap-2"
-                      style={{
-                        gridTemplateColumns:
-                          (rightSideMatches[round]?.length ?? 0) > 2
-                            ? "repeat(2, 1fr)"
-                            : `repeat(${Math.max(1, rightSideMatches[round]?.length ?? 0)}, 1fr)`,
-                      }}
-                    >
-                      {rightSideMatches[round]?.map((match, index) =>
-                        renderMatchCard(match, index),
-                      )}
-                    </div>
-                  </div>
+      {/* Desktop layout */}
+      <div className="hidden lg:block space-y-8 max-w-7xl mx-auto">
+        {semifinalRounds.map((round) => (
+          <div key={round} className="space-y-6">
+            <h3 className="text-xl font-bold text-center text-primary">
+              {getRoundName(round, 4)}
+            </h3>
+            <div className="grid grid-cols-2 gap-8 xl:gap-12">
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-center text-muted-foreground">Left Bracket</h4>
+                <div
+                  className="grid gap-4"
+                  style={{
+                    gridTemplateColumns: (leftSideMatches[round]?.length ?? 0) > 2 ? "repeat(2, 1fr)" : `repeat(${Math.max(1, leftSideMatches[round]?.length ?? 0)}, 1fr)`,
+                  }}
+                >
+                  {leftSideMatches[round]?.map((match, index) => renderMatchCard(match, index))}
                 </div>
               </div>
-            ))}
-
-            {/* Final Match - Mobile */}
-            <div className="flex flex-col items-center space-y-3 pt-4">
-              <h3 className="text-lg font-bold text-center text-primary">
-                Championship Final
-              </h3>
-              <Card className="p-4 bg-gradient-to-r from-primary/10 to-pink-hot/10 border-primary/30 w-full max-w-xs mx-auto">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-center">
-                    <Trophy className="w-6 h-6 text-yellow-500" />
-                  </div>
-
-                  <div className="space-y-2">
-                    <div
-                      className={`flex items-center gap-2 p-2 rounded text-xs transition-colors ${
-                        finalMatch.winner?.id === finalMatch.team1?.id
-                          ? "bg-gradient-to-r from-primary/30 to-pink-hot/20 border border-primary/50"
-                          : "bg-muted/30"
-                      }`}
-                    >
-                      <Users className="w-3 h-3 text-primary flex-shrink-0" />
-                      <span className="font-semibold truncate">
-                        {finalMatch.team1
-                          ? `${finalMatch.team1.player1.name} & ${finalMatch.team1.player2.name}`
-                          : "Waiting..."}
-                      </span>
-                    </div>
-
-                    <div className="text-center text-sm text-muted-foreground font-bold">VS</div>
-
-                    <div
-                      className={`flex items-center gap-2 p-2 rounded text-xs transition-colors ${
-                        finalMatch.winner?.id === finalMatch.team2?.id
-                          ? "bg-gradient-to-r from-primary/30 to-pink-hot/20 border border-primary/50"
-                          : "bg-muted/30"
-                      }`}
-                    >
-                      <Users className="w-3 h-3 text-primary flex-shrink-0" />
-                      <span className="font-semibold truncate">
-                        {finalMatch.team2
-                          ? `${finalMatch.team2.player1.name} & ${finalMatch.team2.player2.name}`
-                          : "Waiting..."}
-                      </span>
-                    </div>
-                  </div>
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-center text-muted-foreground">Right Bracket</h4>
+                <div
+                  className="grid gap-4"
+                  style={{
+                    gridTemplateColumns: (rightSideMatches[round]?.length ?? 0) > 2 ? "repeat(2, 1fr)" : `repeat(${Math.max(1, rightSideMatches[round]?.length ?? 0)}, 1fr)`,
+                  }}
+                >
+                  {rightSideMatches[round]?.map((match, index) => renderMatchCard(match, index))}
                 </div>
-              </Card>
+              </div>
             </div>
           </div>
+        ))}
+
+        {/* Final Match - Desktop */}
+        <div className="flex flex-col items-center space-y-4 pt-8">
+          <h3 className="text-2xl font-bold text-center text-primary">🏆 Championship Final</h3>
+          <Card className="p-6 bg-gradient-to-r from-primary/10 to-pink-hot/10 border-primary/30 w-full max-w-md mx-auto">
+            <div className="space-y-4">
+              <div className="flex items-center justify-center">
+                <Crown className="w-8 h-8 text-yellow-500" />
+              </div>
+              <div className="space-y-3">
+                {[finalMatch.team1, finalMatch.team2].map((team, idx) => {
+                  const isWinner = finalMatch.winner?.id === team?.id;
+                  return (
+                    <div
+                      key={idx}
+                      className={`flex items-center gap-3 p-4 rounded-lg text-sm transition-colors ${
+                        isWinner
+                          ? "bg-gradient-to-r from-primary/30 to-pink-hot/20 border border-primary/50"
+                          : "bg-muted/30"
+                      }`}
+                    >
+                      <Users className="w-5 h-5 text-primary flex-shrink-0" />
+                      <span className="font-semibold truncate">
+                        {team ? `${team.player1.name} & ${team.player2.name}` : "Waiting for finalist..."}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </Card>
         </div>
+      </div>
 
-        {/* Desktop: Normal layout */}
-        <div className="hidden lg:block space-y-8 max-w-7xl mx-auto">
-          <div className="space-y-8">
-            {semifinalRounds.map((round) => (
-              <div key={round} className="space-y-6">
-                <h3 className="text-xl font-bold text-center text-primary">
-                  {getRoundName(round, 4)}
-                </h3>
-
-                <div className="grid grid-cols-2 gap-8 xl:gap-12">
-                  {/* Left Side */}
-                  <div className="space-y-4">
-                    <h4 className="text-lg font-semibold text-center text-muted-foreground">
-                      Left Bracket
-                    </h4>
-                    <div
-                      className="grid gap-4"
-                      style={{
-                        gridTemplateColumns:
-                          (leftSideMatches[round]?.length ?? 0) > 2
-                            ? "repeat(2, 1fr)"
-                            : `repeat(${Math.max(1, leftSideMatches[round]?.length ?? 0)}, 1fr)`,
-                      }}
-                    >
-                      {leftSideMatches[round]?.map((match, index) =>
-                        renderMatchCard(match, index),
-                      )}
-                    </div>
+      {/* Mobile layout — horizontal scroll */}
+      <div className="lg:hidden overflow-x-auto pb-4 -mx-4 px-4">
+        <div className="min-w-[800px] space-y-6">
+          {semifinalRounds.map((round) => (
+            <div key={round} className="space-y-3">
+              <h3 className="text-base font-bold text-center text-primary">
+                {getRoundName(round, 4)}
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <h4 className="text-xs font-semibold text-center text-muted-foreground uppercase tracking-wider">Left</h4>
+                  <div className="grid gap-2" style={{ gridTemplateColumns: (leftSideMatches[round]?.length ?? 0) > 2 ? "repeat(2, 1fr)" : `repeat(${Math.max(1, leftSideMatches[round]?.length ?? 0)}, 1fr)` }}>
+                    {leftSideMatches[round]?.map((match, index) => renderMatchCard(match, index))}
                   </div>
-
-                  {/* Right Side */}
-                  <div className="space-y-4">
-                    <h4 className="text-lg font-semibold text-center text-muted-foreground">
-                      Right Bracket
-                    </h4>
-                    <div
-                      className="grid gap-4"
-                      style={{
-                        gridTemplateColumns:
-                          (rightSideMatches[round]?.length ?? 0) > 2
-                            ? "repeat(2, 1fr)"
-                            : `repeat(${Math.max(1, rightSideMatches[round]?.length ?? 0)}, 1fr)`,
-                      }}
-                    >
-                      {rightSideMatches[round]?.map((match, index) =>
-                        renderMatchCard(match, index),
-                      )}
-                    </div>
+                </div>
+                <div className="space-y-2">
+                  <h4 className="text-xs font-semibold text-center text-muted-foreground uppercase tracking-wider">Right</h4>
+                  <div className="grid gap-2" style={{ gridTemplateColumns: (rightSideMatches[round]?.length ?? 0) > 2 ? "repeat(2, 1fr)" : `repeat(${Math.max(1, rightSideMatches[round]?.length ?? 0)}, 1fr)` }}>
+                    {rightSideMatches[round]?.map((match, index) => renderMatchCard(match, index))}
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
 
-          {/* Final Match - Desktop */}
-          <div className="flex flex-col items-center space-y-4 pt-8">
-            <h3 className="text-2xl font-bold text-center text-primary">
-              Championship Final
-            </h3>
-            <Card className="p-6 bg-gradient-to-r from-primary/10 to-pink-hot/10 border-primary/30 w-full max-w-md mx-auto">
-              <div className="space-y-4">
+          {/* Final Match - Mobile */}
+          <div className="flex flex-col items-center space-y-3 pt-4">
+            <h3 className="text-lg font-bold text-center text-primary">🏆 Championship Final</h3>
+            <Card className="p-4 bg-gradient-to-r from-primary/10 to-pink-hot/10 border-primary/30 w-full max-w-xs mx-auto">
+              <div className="space-y-3">
                 <div className="flex items-center justify-center">
-                  <Trophy className="w-8 h-8 text-yellow-500" />
+                  <Crown className="w-6 h-6 text-yellow-500" />
                 </div>
-
-                <div className="space-y-3">
-                  <div
-                    className={`flex items-center gap-3 p-4 rounded-lg text-sm transition-colors ${
-                      finalMatch.winner?.id === finalMatch.team1?.id
-                        ? "bg-gradient-to-r from-primary/30 to-pink-hot/20 border border-primary/50"
-                        : "bg-muted/30"
-                    }`}
-                  >
-                    <Users className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="font-semibold truncate">
-                      {finalMatch.team1
-                        ? `${finalMatch.team1.player1.name} & ${finalMatch.team1.player2.name}`
-                        : "Waiting for finalist..."}
-                    </span>
-                  </div>
-
-                  <div className="text-center text-lg text-muted-foreground font-bold">
-                    VS
-                  </div>
-
-                  <div
-                    className={`flex items-center gap-3 p-4 rounded-lg text-sm transition-colors ${
-                      finalMatch.winner?.id === finalMatch.team2?.id
-                        ? "bg-gradient-to-r from-primary/30 to-pink-hot/20 border border-primary/50"
-                        : "bg-muted/30"
-                    }`}
-                  >
-                    <Users className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="font-semibold truncate">
-                      {finalMatch.team2
-                        ? `${finalMatch.team2.player1.name} & ${finalMatch.team2.player2.name}`
-                        : "Waiting for finalist..."}
-                    </span>
-                  </div>
-                </div>
+                {[finalMatch.team1, finalMatch.team2].map((team, idx) => {
+                  const isWinner = finalMatch.winner?.id === team?.id;
+                  return (
+                    <div
+                      key={idx}
+                      className={`flex items-center gap-2 p-2 rounded text-xs transition-colors ${
+                        isWinner ? "bg-gradient-to-r from-primary/30 to-pink-hot/20 border border-primary/50" : "bg-muted/30"
+                      }`}
+                    >
+                      <Users className="w-3 h-3 text-primary flex-shrink-0" />
+                      <span className="font-semibold truncate">
+                        {team ? `${team.player1.name} & ${team.player2.name}` : "Waiting..."}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </Card>
           </div>
         </div>
       </div>
+
+      {/* Play Again button when tournament is running */}
+      {status !== "registration" && !isTournamentComplete() && (
+        <div className="text-center pt-4">
+          <Button
+            variant="outline"
+            onClick={resetTournament}
+            className="text-muted-foreground"
+          >
+            <RotateCcw className="w-4 h-4 mr-2" />
+            Reset Tournament
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

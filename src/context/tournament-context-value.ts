@@ -6,11 +6,12 @@ export interface TournamentContextValue {
   teams: Team[];
   matches: Match[];
   status: TournamentStatus;
+  isGenerating: boolean;
   addParticipant: (name: string, age: number, description: string) => void;
   removeParticipant: (id: string) => void;
   generateTeams: () => { teamsCreated: number; message: string };
+  setMatchWinner: (matchId: string, winningTeam: Team) => void;
+  resetTournament: () => void;
 }
 
-export const TournamentContext = createContext<TournamentContextValue | null>(
-  null,
-);
+export const TournamentContext = createContext<TournamentContextValue | null>(null);

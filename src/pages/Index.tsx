@@ -4,8 +4,11 @@ import { TournamentBracket } from "@/components/TournamentBracket";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Sparkles } from "lucide-react";
+import { useTournament } from "@/hooks/use-tournament";
 
 const Index = () => {
+  const { participants, status } = useTournament();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-pink-soft/20 to-pink-secondary/30">
       {/* Hero Section */}
@@ -30,7 +33,13 @@ const Index = () => {
               tournament for glory!
             </p>
 
-            <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
+            {participants.length === 0 && status === "registration" && (
+              <p className="text-base text-primary font-medium animate-pulse">
+                🏓 Add at least 4 players to start a tournament →
+              </p>
+            )}
+
+            <div className="flex flex-wrap items-center justify-center gap-4 mb-8 mt-4">
               <Badge variant="secondary" className="text-sm px-4 py-2">
                 Random Team Pairing
               </Badge>

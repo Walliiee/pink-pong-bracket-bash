@@ -15,6 +15,7 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [status, setStatus] = useState<TournamentStatus>("registration");
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const addParticipant = useCallback(
     (name: string, age: number, description: string) => {
@@ -42,6 +43,9 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
       throw new Error("Need an even number of participants to form teams");
     }
 
+    setIsGenerating(true);
+
+    // Brief delay to show loading state
     const shuffled = shuffle([...participants]);
     const newTeams: Team[] = [];
 
@@ -59,12 +63,65 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
     setTeams(newTeams);
     setMatches(filledMatches);
     setStatus("teams_generated");
+    setIsGenerating(false);
 
     return {
       teamsCreated: newTeams.length,
       message: `Successfully created ${newTeams.length} teams and randomly assigned them to bracket positions`,
     };
   }, [participants]);
+
+  const setMatchWinner = useCallback((matchId: string, winningTeam: Team) => {
+    setMatches((prev) => {
+      const updated = prev.map((m) =>
+        m.id === matchId
+          ? { ...m, winner: winningTeam, status: "completed" as const }
+          : m
+      );
+
+      // Advance winner to next round
+      const currentMatch = prev.find((m) => m.id === matchId)!;
+      const currentRound = currentMatch.round;
+      const currentMatchNumber = currentMatch.match_number;
+
+      // Calculate next round match
+      const nextRound = currentRound + 1;
+      const nextMatchNumber = Math.ceil(currentMatchNumber / 2);
+
+      const nextMatch = updated.find(
+        (m) => m.round === nextRound && m.match_number === nextMatchNumber
+      );
+
+      if (nextMatch) {
+        const isTop = currentMatchNumber % 2 === 1;
+        return updated.map((m) =>
+          m.id === nextMatch.id
+            ? {
+                ...m,
+                ...(isTop ? { team1: winningTeam } : { team2: winningTeam }),
+                status: m.team1 && m.team2 ? "in_progress" as const : m.status,
+              }
+            : m
+        );
+      }
+
+      // Check if tournament is complete
+      const finalMatch = updated.find((m) => m.round === 4);
+      if (finalMatch?.winner) {
+        setStatus("completed");
+      }
+
+      return updated;
+    });
+  }, []);
+
+  const resetTournament = useCallback(() => {
+    setParticipants([]);
+    setTeams([]);
+    setMatches([]);
+    setStatus("registration");
+    setIsGenerating(false);
+  }, []);
 
   return (
     <TournamentContext.Provider
@@ -73,9 +130,12 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
         teams,
         matches,
         status,
+        isGenerating,
         addParticipant,
         removeParticipant,
         generateTeams,
+        setMatchWinner,
+        resetTournament,
       }}
     >
       {children}

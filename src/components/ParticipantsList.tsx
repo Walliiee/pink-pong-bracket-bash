@@ -1,12 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Trophy, Trash2, Shuffle, Info, UserPlus, Swords } from "lucide-react";
+import { Users, Trophy, Trash2, Shuffle, Info, UserPlus, Swords, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTournament } from "@/hooks/use-tournament";
 
 export const ParticipantsList = () => {
-  const { participants, teams, removeParticipant, generateTeams, status } = useTournament();
+  const { participants, teams, removeParticipant, generateTeams, status, isGenerating } = useTournament();
   const { toast } = useToast();
 
   const handleDelete = (id: string, name: string) => {
@@ -185,20 +185,29 @@ export const ParticipantsList = () => {
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex-1">
                   <p className="text-sm text-green-800 font-medium">
-                    Ready to generate teams!
+                    Ready to start the tournament!
                   </p>
                   <p className="text-xs text-green-600 mt-1">
-                    {participants.length} participants will form{" "}
-                    {participants.length / 2} teams
+                    {participants.length} players will form {participants.length / 2} teams
                   </p>
                 </div>
                 <Button
                   onClick={handleGenerateTeams}
                   className="bg-gradient-to-r from-primary to-pink-hot hover:from-primary/90 hover:to-pink-hot/90 text-white flex-shrink-0"
                   size="sm"
+                  disabled={isGenerating}
                 >
-                  <Shuffle className="w-4 h-4 mr-2" />
-                  Generate Teams
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Starting...
+                    </>
+                  ) : (
+                    <>
+                      <Shuffle className="w-4 h-4 mr-2" />
+                      Start Tournament
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
@@ -221,7 +230,7 @@ export const ParticipantsList = () => {
               <div className="flex items-start gap-2">
                 <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-blue-800">
-                  <strong>Need more players:</strong> At least 2 participants are needed to create a team.
+                  <strong>🏓 Add at least 4 players to start a tournament.</strong> You need more players to form teams.
                 </p>
               </div>
             </div>
